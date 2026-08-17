@@ -102,7 +102,7 @@
 
     <!-- ENDPOINTS -->
     <div id="docs">
-      <div class="section-hdr"><h2>API Endpoints</h2><p>Public ve key ile korumali endpoint'ler</p></div>
+      <div class="section-hdr"><h2>API Endpoints</h2><p>Public ve key ile korumali endpoint'ler &mdash; Rate Limit kapali, her zaman 200 doner</p></div>
       <div class="card">
         <div class="card-body" style="padding:8px 20px;">
           <div class="endpoint" onclick="tryEp('GET','/api/status')">
@@ -125,9 +125,21 @@
             <span class="method m-get">GET</span><span class="ep-path">/api/time</span>
             <span class="ep-desc">Sunucu zamani</span><span class="ep-badge">Auth</span>
           </div>
+          <div class="endpoint" onclick="tryEp('GET','/api/health')">
+            <span class="method m-get">GET</span><span class="ep-path">/api/health</span>
+            <span class="ep-desc">Saglik kontrolu</span><span style="font-size:.7rem;padding:3px 8px;border-radius:4px;background:var(--accent-glow);color:var(--accent);">Public</span>
+          </div>
+          <div class="endpoint" onclick="tryEp('GET','/api/config')">
+            <span class="method m-get">GET</span><span class="ep-path">/api/config</span>
+            <span class="ep-desc">Sunucu konfigurasyonu</span><span style="font-size:.7rem;padding:3px 8px;border-radius:4px;background:var(--accent-glow);color:var(--accent);">Public</span>
+          </div>
           <div class="endpoint" onclick="tryEp('POST','/api/data')">
             <span class="method m-post">POST</span><span class="ep-path">/api/data</span>
             <span class="ep-desc">Veri gonder</span><span class="ep-badge">Auth</span>
+          </div>
+          <div class="endpoint" onclick="tryEp('POST','/api/users')">
+            <span class="method m-post">POST</span><span class="ep-path">/api/users</span>
+            <span class="ep-desc">Kullanici ekle</span><span class="ep-badge">Auth</span>
           </div>
         </div>
       </div>
@@ -140,24 +152,24 @@
         Nasil Kullanilir
       </div>
       <div class="card-body">
-        <div class="code-block"><span class="cmt">// API key almak icin panele gir: /login</span>
+        <div class="code-block"><span class="cmt">// Rate Limit: KAPALI | Auth: Opsiyonel | HER ZAMAN HTTP 200</span>
 
-<span class="cmt">// GET istek</span>
+<span class="cmt">// API key almak icin panele gir: /login</span>
+
+<span class="cmt">// GET istek (key'siz de calisir)</span>
+<span class="kw">curl</span> <span class="url">/api/users</span>
+
+<span class="cmt">// GET istek (key ile)</span>
 <span class="kw">curl</span> <span class="url">/api/users</span> \
   -H <span class="str">"X-API-Key: vcc_anahatarinburada"</span>
 
 <span class="cmt">// JavaScript fetch</span>
-<span class="kw">fetch</span>(<span class="str">'/api/users'</span>, {
-  headers: { <span class="str">'X-API-Key'</span>: <span class="str">'vcc_anahatarinburada'</span> }
-})
+<span class="kw">fetch</span>(<span class="str">'/api/users'</span>)
 
 <span class="cmt">// POST istek</span>
 <span class="kw">fetch</span>(<span class="str">'/api/data'</span>, {
   method: <span class="str">'POST'</span>,
-  headers: {
-    <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
-    <span class="str">'X-API-Key'</span>: <span class="str">'vcc_anahatarinburada'</span>
-  },
+  headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
   body: JSON.stringify({ <span class="str">merhaba</span>: <span class="str">'dünya'</span> })
 })</div>
       </div>
@@ -177,11 +189,13 @@
               <label>Endpoint</label>
               <select class="sel" id="pgEndpoint" onchange="pgUpd()">
                 <option value="/api/status">/api/status (public)</option>
+                <option value="/api/health">/api/health (public)</option>
+                <option value="/api/config">/api/config (public)</option>
                 <option value="/api/me">/api/me</option>
-                <option value="/api/users">/api/users</option>
+                <option value="/api/users">GET /api/users</option>
                 <option value="/api/info">/api/info</option>
                 <option value="/api/time">/api/time</option>
-                <option value="/api/data">/api/data (POST)</option>
+                <option value="/api/data">POST /api/data</option>
               </select>
             </div>
             <div class="form-g">
@@ -226,7 +240,7 @@
     }
     function tryEp(m,p){document.getElementById('pgMethod').value=m;document.getElementById('pgEndpoint').value=p;pgUpd();document.getElementById('playground').scrollIntoView({behavior:'smooth'});setTimeout(pgSend,400);}
     (async()=>{try{const r=await fetch(BASE+'/api/status');const d=await r.json();document.getElementById('s-status').textContent='Online';document.getElementById('s-uptime').textContent=d.uptime;}catch(e){document.getElementById('s-status').textContent='Offline';document.getElementById('s-uptime').textContent='?';}
-    try{const r=await fetch(BASE+'/api/time');const d=await r.json();document.getElementById('s-time').textContent=d.hour_tr||'?';}catch(e){}})();
+    try{const r=await fetch(BASE+'/api/time');const d=await r.json();document.getElementById('s-time').textContent=d.turkey?d.turkey.split(' ')[1]||d.turkey:'?';}catch(e){}})();
   </script>
 </body>
 </html>

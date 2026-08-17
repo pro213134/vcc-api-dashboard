@@ -12,11 +12,12 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS — her yerden erisim icin
+// CORS — her yerden, her sey acik
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, X-API-Key, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -43,51 +44,60 @@ function genKey(name) {
 }
 genKey('Default');
 
-// ═══ RATE LIMIT — key ile giris yapanlara limitsiz ═══
-const rateLimits = new Map();
-function rateLimit(req, res, next) {
-  // Key ile gelenlere limit yok
-  if (req.headers['x-api-key']) return next();
+// ═══ NO RATE LIMIT ═══
 
-  const id = req.ip;
-  const now = Date.now();
-  if (!rateLimits.has(id)) { rateLimits.set(id, { count: 1, resetAt: now + 60000 }); return next(); }
-  const lim = rateLimits.get(id);
-  if (now > lim.resetAt) { lim.count = 1; lim.resetAt = now + 60000; return next(); }
-  lim.count++;
-  res.set('X-RateLimit-Remaining', Math.max(0, 200 - lim.count));
-  if (lim.count > 200) return res.status(429).json({ error: true, message: 'Rate limit asildi' });
-  next();
-}
-
-// ═══ API AUTH ═══
+// ═══ API AUTH (opsiyonel — key yoksa da calisir) ═══
 function apiKeyAuth(req, res, next) {
   const key = req.headers['x-api-key'];
-  if (!key) return res.status(401).json({ error: true, message: 'API key gerekli (X-API-Key header)' });
+  if (!key) { req.apiKeyData = null; return next(); }
   const keyData = apiKeys.get(key);
-  if (!keyData) return res.status(401).json({ error: true, message: 'Gecersiz API key' });
-  if (!keyData.active) return res.status(403).json({ error: true, message: 'API key pasif' });
-  keyData.requests++;
-
-  requestLogs.unshift({ method: req.method, path: req.originalUrl, key: keyData.name, ip: req.ip, status: 200, timestamp: new Date().toISOString() });
-  if (requestLogs.length > 1000) requestLogs.pop();
+  if (keyData && keyData.active) {
+    keyData.requests++;
+    req.apiKeyData = keyData;
+  } else {
+    req.apiKeyData = null;
+  }
   next();
 }
 
 // ═══ ADMIN AUTH ═══
 function adminAuth(req, res, next) {
   if (req.session && req.session.admin) return next();
+  if (req.headers.accept && req.headers.accept.includes('application/json')) {
+    return res.status(401).json({ status: 200, error: false, message: 'Giris gerekli' });
+  }
   res.redirect('/login');
 }
 
-app.use(rateLimit);
+// ═══════════════════════════════════════════════
+//  PUBLIC API — HER ZAMAN 200 DONER
+// ═══════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════
-//  PUBLIC API (key gerekmez)
-// ═══════════════════════════════════════════════
-app.get('/api/status', (req, res) => {
+// Her istegi logla
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = function(data) {
+    // Her zaman 200 don
+    res.status(200);
+    // Log
+    requestLogs.unshift({
+      method: req.method,
+      path: req.originalUrl,
+      ip: req.ip,
+      key: req.apiKeyData ? req.apiKeyData.name : null,
+      timestamp: new Date().toISOString()
+    });
+    if (requestLogs.length > 2000) requestLogs.pop();
+    return originalJson(data);
+  };
+  next();
+});
+
+// Durum
+app.get('/api/status', apiKeyAuth, (req, res) => {
   res.json({
     status: 'ok',
+    error: false,
     gateway: 'active',
     server: 'VCC API Dashboard',
     version: '1.0.0',
@@ -96,18 +106,14 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// ═══════════════════════════════════════════════
-//  PROTECTED API (key gerekli — limitsiz)
-// ═══════════════════════════════════════════════
-
 // Dogrulama
 app.get('/api/me', apiKeyAuth, (req, res) => {
-  res.json({ status: 200, message: 'Hosgeldin!', server: 'VCC API Dashboard', verified: true });
+  res.json({ status: 200, error: false, message: 'Hosgeldin!', server: 'VCC API Dashboard', verified: true });
 });
 
 // Kullanicilar
 app.get('/api/users', apiKeyAuth, (req, res) => {
-  res.json({ status: 200, count: 3, users: [
+  res.json({ status: 200, error: false, count: 3, users: [
     { id: 1, name: 'Ali', email: 'ali@example.com', role: 'admin' },
     { id: 2, name: 'Ayse', email: 'ayse@example.com', role: 'user' },
     { id: 3, name: 'Mehmet', email: 'mehmet@example.com', role: 'user' }
@@ -117,25 +123,26 @@ app.get('/api/users', apiKeyAuth, (req, res) => {
 // Kullanici ekle
 app.post('/api/users', apiKeyAuth, (req, res) => {
   const { name, email, role } = req.body;
-  if (!name || !email) return res.status(400).json({ error: true, message: 'name ve email gerekli' });
-  res.json({ status: 200, message: 'Kullanici eklendi', user: { id: Date.now(), name, email, role: role || 'user' } });
+  if (!name || !email) return res.json({ status: 200, error: false, message: 'name ve email gerekli', received: req.body });
+  res.json({ status: 200, error: false, message: 'Kullanici eklendi', user: { id: Date.now(), name, email, role: role || 'user' } });
 });
 
 // Veri gonder
 app.post('/api/data', apiKeyAuth, (req, res) => {
-  res.json({ status: 200, message: 'Veri alindi', received: req.body, at: new Date().toISOString() });
+  res.json({ status: 200, error: false, message: 'Veri alindi', received: req.body, at: new Date().toISOString() });
 });
 
 // Proje bilgisi
 app.get('/api/info', apiKeyAuth, (req, res) => {
   res.json({
+    status: 200, error: false,
     name: 'VCC API Dashboard',
     version: '1.0.0',
     author: 'VCC',
     node: process.version,
     memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
     uptime: Math.floor((Date.now() - startTime.getTime()) / 1000) + 's',
-    endpoints: ['/api/status', '/api/me', '/api/users', '/api/data', '/api/info', '/api/time', '/api/health']
+    endpoints: ['/api/status', '/api/me', '/api/users', '/api/data', '/api/info', '/api/time', '/api/health', '/api/config']
   });
 });
 
@@ -143,21 +150,48 @@ app.get('/api/info', apiKeyAuth, (req, res) => {
 app.get('/api/time', apiKeyAuth, (req, res) => {
   const now = new Date();
   res.json({
+    status: 200, error: false,
     utc: now.toISOString(),
     turkey: now.toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' }),
     unix: Math.floor(now.getTime() / 1000)
   });
 });
 
-// Saglik kontrolu (emulator icin)
+// Saglik kontrolu
 app.get('/api/health', apiKeyAuth, (req, res) => {
   const mem = process.memoryUsage();
   res.json({
-    status: 'healthy',
+    status: 200, error: false, health: 'healthy',
     uptime: Math.floor((Date.now() - startTime.getTime()) / 1000),
     memory: { used: Math.round(mem.heapUsed / 1024 / 1024) + ' MB', total: Math.round(mem.heapTotal / 1024 / 1024) + ' MB' },
     keys: { active: [...apiKeys.values()].filter(k => k.active).length, total: apiKeys.size },
     requests: { total: requestLogs.length },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Config endpoint (emulator icin)
+app.get('/api/config', apiKeyAuth, (req, res) => {
+  res.json({
+    status: 200, error: false,
+    server: 'VCC API Dashboard',
+    version: '1.0.0',
+    features: {
+      cors: true,
+      rateLimit: false,
+      auth: 'optional',
+      maxLogSize: 2000
+    },
+    endpoints: {
+      status: '/api/status',
+      health: '/api/health',
+      config: '/api/config',
+      users: '/api/users',
+      data: '/api/data',
+      info: '/api/info',
+      time: '/api/time',
+      me: '/api/me'
+    },
     timestamp: new Date().toISOString()
   });
 });
@@ -176,7 +210,7 @@ app.post('/login', (req, res) => {
     req.session.admin = true;
     return res.json({ success: true, redirect: '/panel' });
   }
-  res.status(401).json({ success: false, message: 'Kullanici adi veya sifre hatali' });
+  res.json({ success: false, message: 'Kullanici adi veya sifre hatali' });
 });
 
 app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); });
@@ -217,12 +251,15 @@ app.get('/admin/logs', adminAuth, (req, res) => { res.json({ logs: requestLogs.s
 app.get('/panel', adminAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'panel.html')); });
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
+// Catch — her zaman 200
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Endpoint bulunamadi' });
+  if (req.path.startsWith('/api/')) return res.json({ status: 200, error: false, message: 'Endpoint bulunamadi: ' + req.path });
   res.redirect('/');
 });
 
 app.listen(PORT, () => {
-  console.log('  VCC API Dashboard calisiyor: http://localhost:' + PORT);
+  console.log('  VCC API calisiyor: http://localhost:' + PORT);
+  console.log('  Rate Limit: KAPALI');
+  console.log('  Auth: Opsiyonel');
   console.log('  Admin: ' + ADMIN_USER + ' / ' + ADMIN_PASS);
 });
