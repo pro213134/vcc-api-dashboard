@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VCC — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#09090b;--card:#111113;--card-hover:#18181b;--border:#27272a;--border-light:#3f3f46;--text:#fafafa;--text-dim:#a1a1aa;--text-muted:#71717a;--accent:#22c55e;--accent-dim:#16a34a;--accent-glow:rgba(34,197,94,.15);--blue:#3b82f6;--blue-dim:rgba(59,130,246,.15);--orange:#f97316;--orange-dim:rgba(249,115,22,.15);--red:#ef4444;--red-dim:rgba(239,68,68,.15);--purple:#a855f7;--purple-dim:rgba(168,85,247,.15);--radius:12px;--radius-sm:8px}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:60px 60px;}
+    .wrapper{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 24px;}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;}
+    .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);}
+    .nav-right{display:flex;align-items:center;gap:12px;}
+    .nav-link{color:var(--text-dim);text-decoration:none;font-size:.85rem;padding:6px 14px;border:1px solid var(--border);border-radius:20px;transition:all .2s;}
+    .nav-link:hover{border-color:var(--accent);color:var(--accent);}
+    .nav-link.danger{border-color:var(--red);color:var(--red);}
+    .nav-link.danger:hover{background:var(--red-dim);}
+    .admin-badge{font-size:.75rem;padding:5px 12px;border-radius:20px;background:var(--accent-glow);border:1px solid rgba(34,197,94,.2);color:var(--accent);font-weight:500;}
+    .page-header{padding:32px 0 24px;}
+    .page-header h1{font-size:1.6rem;font-weight:700;}
+    .page-header p{color:var(--text-dim);font-size:.9rem;margin-top:4px;}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+    .stat-card .label{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .stat-card .value{font-size:1.6rem;font-weight:700;}
+    .stat-card .value.green{color:var(--accent);}
+    .stat-card .value.blue{color:var(--blue);}
+    .stat-card .value.orange{color:var(--orange);}
+    .stat-card .value.purple{color:var(--purple);}
+    .section{margin-bottom:28px;}
+    .section-title{font-size:1rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);}
+    .card-header h3{font-size:.9rem;font-weight:600;}
+    .card-body{padding:20px;}
+    table{width:100%;border-collapse:collapse;font-size:.85rem;}
+    th{text-align:left;padding:10px 16px;color:var(--text-muted);font-weight:500;font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+    td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-dim);}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:rgba(255,255,255,.02);}
+    .mono{font-family:'JetBrains Mono',monospace;font-size:.8rem;}
+    .badge{font-size:.7rem;padding:3px 8px;border-radius:4px;font-weight:600;}
+    .badge-green{background:var(--accent-glow);color:var(--accent);}
+    .badge-red{background:var(--red-dim);color:var(--red);}
+    .badge-blue{background:var(--blue-dim);color:var(--blue);}
+    .badge-orange{background:var(--orange-dim);color:var(--orange);}
+    .btn{padding:7px 14px;border-radius:var(--radius-sm);font-size:.82rem;font-weight:500;cursor:pointer;border:none;transition:all .2s;}
+    .btn-primary{background:var(--accent);color:#000;}
+    .btn-primary:hover{background:var(--accent-dim);}
+    .btn-outline{background:transparent;color:var(--text-dim);border:1px solid var(--border);}
+    .btn-outline:hover{border-color:var(--border-light);color:var(--text);}
+    .btn-danger{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,.2);}
+    .btn-danger:hover{background:var(--red-dim);}
+    .btn-sm{padding:5px 10px;font-size:.75rem;}
+    .btn-group{display:flex;gap:6px;}
+    .form-row{display:flex;gap:10px;}
+    .input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:var(--radius-sm);font-size:.85rem;outline:none;}
+    .input:focus{border-color:var(--accent);}
+    .new-key-box{background:var(--accent-glow);border:1px solid rgba(34,197,94,.2);border-radius:var(--radius-sm);padding:12px 16px;margin-top:12px;display:none;}
+    .new-key-box code{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--accent);word-break:break-all;}
+    .new-key-box .copy-btn{background:var(--accent);color:#000;border:none;padding:5px 12px;border-radius:4px;font-size:.75rem;font-weight:600;cursor:pointer;margin-left:8px;}
+    .log-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.82rem;}
+    .log-item:last-child{border-bottom:none;}
+    .log-path{flex:1;font-family:'JetBrains Mono',monospace;color:var(--text);}
+    .log-latency{color:var(--text-muted);min-width:50px;text-align:right;}
+    .log-time{color:var(--text-muted);font-size:.75rem;min-width:70px;text-align:right;}
+    footer{border-top:1px solid var(--border);padding:24px 0;text-align:center;color:var(--text-muted);font-size:.8rem;margin-top:40px;}
+    ::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    @media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr);}.form-row{flex-direction:column;}}
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="wrapper">
+    <nav>
+      <div class="logo"><div class="logo-dot"></div>VCC Panel</div>
+      <div class="nav-right">
+        <span class="admin-badge">Admin</span>
+        <a href="/" class="nav-link">Site</a>
+        <a href="/logout" class="nav-link danger">Cikis</a>
+      </div>
+    </nav>
+
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <p>API keylerini yonet, istatistikleri gor</p>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Uptime</div><div class="value green" id="st-uptime">-</div></div>
+      <div class="stat-card"><div class="label">Aktif Keyler</div><div class="value blue" id="st-keys">-</div></div>
+      <div class="stat-card"><div class="label">Toplam Istek</div><div class="value orange" id="st-reqs">-</div></div>
+      <div class="stat-card"><div class="label">Bellek</div><div class="value purple" id="st-mem">-</div></div>
+    </div>
+
+    <!-- CREATE KEY -->
+    <div class="section">
+      <div class="section-title">Yeni API Key Olustur</div>
+      <div class="card">
+        <div class="card-body">
+          <div class="form-row">
+            <input class="input" id="newKeyName" placeholder="Key adi (orn. Uygulama, Test, Partner...)">
+            <button class="btn btn-primary" onclick="createKey()">Olustur</button>
+          </div>
+          <div class="new-key-box" id="newKeyBox">
+            <strong style="font-size:.8rem;color:var(--text);">Yeni Key:</strong><br>
+            <code id="newKeyValue"></code>
+            <button class="copy-btn" onclick="copyNewKey()">Kopyala</button>
+            <p style="font-size:.75rem;color:var(--orange);margin-top:8px;">Bu keyi kaydet! Tekrar gosterilmeyecek.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KEYS TABLE -->
+    <div class="section">
+      <div class="section-title">API Keyler</div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Tum Keyler</h3>
+          <button class="btn btn-outline btn-sm" onclick="loadKeys()">Yenile</button>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <table>
+            <thead><tr><th>Ad</th><th>Key</th><th>Istek</th><th>Durum</th><th>Tarih</th><th>Islem</th></tr></thead>
+            <tbody id="keysTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECENT LOGS -->
+    <div class="section">
+      <div class="section-title">Son Istekler</div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Request Loglari</h3>
+          <button class="btn btn-outline btn-sm" onclick="loadLogs()">Yenile</button>
+        </div>
+        <div class="card-body" id="logsContainer"></div>
+      </div>
+    </div>
+
+    <footer>VCC API Dashboard — Admin Panel</footer>
+  </div>
+
+  <script>
+    const BASE = location.origin;
+
+    async function api(path, opts = {}) {
+      const r = await fetch(BASE + path, { credentials: 'include', ...opts });
+      if (r.status === 401 || r.status === 302) { window.location.href = '/login'; return null; }
+      return r.json();
+    }
+
+    // STATS
+    async function loadStats() {
+      const d = await api('/admin/stats');
+      if (!d) return;
+      document.getElementById('st-uptime').textContent = d.uptime;
+      document.getElementById('st-keys').textContent = d.activeKeys;
+      document.getElementById('st-reqs').textContent = d.totalRequests;
+      document.getElementById('st-mem').textContent = d.memory;
+    }
+
+    // KEYS
+    let lastNewKey = '';
+    async function loadKeys() {
+      const d = await api('/admin/keys');
+      if (!d) return;
+      const tbody = document.getElementById('keysTable');
+      if (d.keys.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:30px;">Henuz key yok</td></tr>'; return; }
+      tbody.innerHTML = d.keys.map(k => `
+        <tr>
+          <td style="color:var(--text);font-weight:500;">${k.name}</td>
+          <td class="mono" style="color:var(--accent);">${k.key.substring(0,12)}...${k.key.substring(k.key.length-4)}</td>
+          <td>${k.requests}</td>
+          <td><span class="badge ${k.active?'badge-green':'badge-red'}">${k.active?'Aktif':'Pasif'}</span></td>
+          <td style="font-size:.78rem;">${new Date(k.createdAt).toLocaleDateString('tr-TR')}</td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-outline btn-sm" onclick="toggleKey('${k.id}')">${k.active?'Pasifles':'Aktifles'}</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteKey('${k.id}','${k.name}')">Sil</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function createKey() {
+      const name = document.getElementById('newKeyName').value.trim();
+      if (!name) return;
+      const d = await api('/admin/keys', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+      if (d && d.success) {
+        lastNewKey = d.key.key;
+        document.getElementById('newKeyValue').textContent = d.key.key;
+        document.getElementById('newKeyBox').style.display = 'block';
+        document.getElementById('newKeyName').value = '';
+        loadKeys();
+      }
+    }
+
+    async function toggleKey(id) {
+      await api('/admin/keys/' + id + '/toggle', { method: 'PUT' });
+      loadKeys();
+    }
+
+    async function deleteKey(id, name) {
+      if (!confirm('"' + name + '" keyini silmek istedigine emin misin?')) return;
+      await api('/admin/keys/' + id, { method: 'DELETE' });
+      loadKeys();
+    }
+
+    function copyNewKey() {
+      navigator.clipboard.writeText(lastNewKey);
+      event.target.textContent = 'Kopyalandi!';
+      setTimeout(() => event.target.textContent = 'Kopyala', 1500);
+    }
+
+    // LOGS
+    async function loadLogs() {
+      const d = await api('/admin/logs?limit=30');
+      if (!d) return;
+      const c = document.getElementById('logsContainer');
+      if (d.logs.length === 0) { c.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">Henuz istek yok</p>'; return; }
+      c.innerHTML = d.logs.map(l => `
+        <div class="log-item">
+          <span class="badge ${l.method==='GET'?'badge-green':'badge-blue'}" style="min-width:42px;text-align:center;">${l.method}</span>
+          <span class="log-path">${l.path}</span>
+          <span class="badge badge-orange">${l.key||'?'}</span>
+          <span class="log-latency">${l.ip||''}</span>
+          <span class="log-time">${new Date(l.timestamp).toLocaleTimeString('tr-TR')}</span>
+        </div>
+      `).join('');
+    }
+
+    // INIT
+    loadStats(); loadKeys(); loadLogs();
+    setInterval(loadStats, 10000);
+  </script>
+</body>
+</html>
