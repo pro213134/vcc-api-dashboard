@@ -65,7 +65,7 @@ constexpr int           EMERGENCY_HB_MS = 12000;
 constexpr int           MAX_HB_BURST = 3;
 constexpr int           GATEWAY_REAUTH_INTERVAL_SEC = 2 * 60 + 30;
 
-constexpr const char* SERVER_HOST = "";  // local mod: dogrudan Riot gateway'e baglanir
+constexpr const char* SERVER_HOST = "127.0.0.1";  // local mod: gateway-relay.js'ye baglanir
 constexpr const char* AUTH_KEY = "vcc2024";
 constexpr const wchar_t* GW_PATH = L"/vanguard/v1/gateway";
 constexpr INTERNET_PORT  GW_PORT = 8443;

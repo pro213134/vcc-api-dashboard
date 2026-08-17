@@ -5,3 +5,4 @@ tunnel-err.log
 gateway/output.txt
 gateway/server.pfx
 gateway/x64/
+gateway/vanguard_gateaway_key.pem
