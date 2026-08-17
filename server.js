@@ -197,6 +197,69 @@ app.get('/api/config', apiKeyAuth, (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
+//  GATEWAY ENDPOINTS (Vanguard icin)
+// ═══════════════════════════════════════════════
+const gatewaySessions = new Map();
+
+// Gateway config — C++ client burdan ayarlari cekebilir
+app.get('/api/gateway/config', apiKeyAuth, (req, res) => {
+  res.json({
+    status: 200, error: false,
+    gateway_host: process.env.GATEWAY_HOST || 'localhost',
+    gateway_port: parseInt(process.env.GATEWAY_PORT) || 51820,
+    auth_key: process.env.AUTH_KEY || 'vcc2024',
+    heartbeat_interval_ms: 30000,
+    idle_timeout_sec: 0,
+    max_clients: 32,
+    features: {
+      tls: true,
+      pipe_intercept: true,
+      auto_reauth: true,
+      randomized_hwid: true,
+      fallback_cache: true
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Gateway session kayit — C++ client session durumunu buraya bildirir
+app.post('/api/gateway/session', apiKeyAuth, (req, res) => {
+  const { puuid, region, account, status } = req.body;
+  const sid = req.headers['x-session-id'] || crypto.randomBytes(8).toString('hex');
+  const data = {
+    id: sid,
+    puuid: puuid || '',
+    region: region || '',
+    account: account || '',
+    status: status || 'active',
+    created_at: new Date().toISOString(),
+    last_heartbeat: new Date().toISOString()
+  };
+  gatewaySessions.set(sid, data);
+  res.json({ status: 200, error: false, session_id: sid, message: 'Session kaydedildi' });
+});
+
+// Gateway heartbeat — C++ client her HB'de buraya bildirir
+app.post('/api/gateway/heartbeat', apiKeyAuth, (req, res) => {
+  const sid = req.headers['x-session-id'];
+  if (sid && gatewaySessions.has(sid)) {
+    const s = gatewaySessions.get(sid);
+    s.last_heartbeat = new Date().toISOString();
+    s.heartbeat_count = (s.heartbeat_count || 0) + 1;
+  }
+  res.json({ status: 200, error: false, message: 'HB alindi', timestamp: new Date().toISOString() });
+});
+
+// Gateway session listesi
+app.get('/api/gateway/sessions', apiKeyAuth, (req, res) => {
+  res.json({
+    status: 200, error: false,
+    count: gatewaySessions.size,
+    sessions: [...gatewaySessions.values()]
+  });
+});
+
+// ═══════════════════════════════════════════════
 //  LOGIN
 // ═══════════════════════════════════════════════
 app.get('/login', (req, res) => {
