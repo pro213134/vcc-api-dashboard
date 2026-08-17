@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VCC API Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#09090b;--card:#111113;--card-hover:#18181b;
+      --border:#27272a;--border-light:#3f3f46;
+      --text:#fafafa;--text-dim:#a1a1aa;--text-muted:#71717a;
+      --accent:#22c55e;--accent-dim:#16a34a;--accent-glow:rgba(34,197,94,.15);
+      --blue:#3b82f6;--blue-dim:rgba(59,130,246,.15);
+      --orange:#f97316;--orange-dim:rgba(249,115,22,.15);
+      --red:#ef4444;--red-dim:rgba(239,68,68,.15);
+      --purple:#a855f7;--purple-dim:rgba(168,85,247,.15);
+      --radius:12px;--radius-sm:8px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:60px 60px;}
+    .bg-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:700px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.08) 0%,transparent 70%);z-index:0;filter:blur(40px);animation:float 8s ease-in-out infinite;}
+    @keyframes float{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(20px);}}
+    .wrapper{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:0 24px;}
+
+    nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;}
+    .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);}
+    .status-badge{display:flex;align-items:center;gap:6px;background:var(--accent-glow);border:1px solid rgba(34,197,94,.2);padding:6px 14px;border-radius:20px;font-size:.8rem;color:var(--accent);font-weight:500;}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+    .hero{text-align:center;padding:80px 0 50px;}
+    .hero h1{font-size:3rem;font-weight:800;line-height:1.1;background:linear-gradient(135deg,#fff,#a1a1aa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:16px;}
+    .hero p{font-size:1.05rem;color:var(--text-dim);max-width:500px;margin:0 auto;line-height:1.7;}
+
+    /* KEY CARD */
+    .key-card{background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:24px 28px;margin-bottom:32px;position:relative;overflow:hidden;}
+    .key-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--blue),var(--purple));}
+    .key-card .label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+    .key-row{display:flex;align-items:center;gap:12px;}
+    .key-value{flex:1;font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--accent);word-break:break-all;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;}
+    .copy-btn{background:var(--accent);color:#000;border:none;padding:12px 20px;border-radius:var(--radius-sm);font-weight:600;font-size:.85rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .copy-btn:hover{background:var(--accent-dim);}
+    .copy-btn.copied{background:var(--blue);color:#fff;}
+    .key-info{margin-top:12px;font-size:.8rem;color:var(--text-muted);display:flex;gap:20px;}
+    .key-info span{display:flex;align-items:center;gap:4px;}
+
+    /* USAGE */
+    .usage-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden;}
+    .usage-header{padding:16px 20px;border-bottom:1px solid var(--border);font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px;}
+    .usage-body{padding:20px;}
+    .code-block{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.7;color:var(--text-dim);overflow-x:auto;}
+    .code-block .kw{color:var(--accent);}
+    .code-block .str{color:var(--blue);}
+    .code-block .cmt{color:var(--text-muted);}
+    .code-block .url{color:var(--orange);}
+
+    /* ENDPOINTS */
+    .endpoint{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;}
+    .endpoint:last-child{border-bottom:none;}
+    .endpoint:hover{background:rgba(255,255,255,.02);}
+    .method{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;padding:4px 10px;border-radius:4px;min-width:52px;text-align:center;}
+    .m-get{background:var(--accent-glow);color:var(--accent);}
+    .m-post{background:var(--blue-dim);color:var(--blue);}
+    .ep-path{font-family:'JetBrains Mono',monospace;font-size:.88rem;flex:1;}
+    .ep-desc{color:var(--text-muted);font-size:.82rem;}
+    .ep-badge{font-size:.7rem;padding:3px 8px;border-radius:4px;background:var(--orange-dim);color:var(--orange);}
+    .try-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:5px 12px;border-radius:6px;font-size:.78rem;cursor:pointer;transition:all .2s;}
+    .try-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+    /* PLAYGROUND */
+    .pg-body{display:grid;grid-template-columns:1fr 1fr;min-height:300px;}
+    .pg-left{padding:20px;border-right:1px solid var(--border);}
+    .pg-right{padding:20px;}
+    .form-g{margin-bottom:12px;}
+    .form-g label{display:block;font-size:.72rem;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;font-weight:500;}
+    .inp{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-size:.85rem;outline:none;font-family:'Inter',sans-serif;}
+    .inp:focus{border-color:var(--accent);}
+    .inp.mono{font-family:'JetBrains Mono',monospace;}
+    .sel{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-size:.85rem;outline:none;cursor:pointer;appearance:none;font-family:'Inter',sans-serif;}
+    .sel:focus{border-color:var(--accent);}
+    .sel option{background:var(--bg);}
+    .send-btn{width:100%;background:var(--accent);color:#000;border:none;padding:10px;border-radius:var(--radius-sm);font-weight:600;font-size:.9rem;cursor:pointer;transition:all .2s;}
+    .send-btn:hover{background:var(--accent-dim);}
+    .resp-meta{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+    .resp-out{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);line-height:1.6;min-height:240px;overflow:auto;white-space:pre-wrap;word-break:break-all;}
+
+    footer{border-top:1px solid var(--border);padding:24px 0;text-align:center;color:var(--text-muted);font-size:.8rem;}
+    ::-webkit-scrollbar{width:5px;height:5px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    @media(max-width:768px){.pg-body{grid-template-columns:1fr;}.pg-left{border-right:none;border-bottom:1px solid var(--border);}.key-row{flex-direction:column;}.hero h1{font-size:2rem;}}
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="wrapper">
+    <nav>
+      <div class="logo"><div class="logo-dot"></div>VCC API Dashboard</div>
+      <div class="status-badge"><div class="status-dot"></div>Gateway Active</div>
+    </nav>
+
+    <div class="hero">
+      <h1>API Gateway</h1>
+      <p>Asagidaki key ile tum API endpoint'lerine erisebilirsin.</p>
+    </div>
+
+    <!-- API KEY -->
+    <div class="key-card">
+      <div class="label">Senin API Key'in</div>
+      <div class="key-row">
+        <div class="key-value" id="apiKey">gw_50e2714951ee6ffde2ace9c419b8f615fb826abf49c28e4b</div>
+        <button class="copy-btn" onclick="copyKey()">Kopyala</button>
+      </div>
+      <div class="key-info">
+        <span>🔒 Key ile korumali</span>
+        <span>⚡ Dakikada 100 istek</span>
+        <span>🟢 Aktif</span>
+      </div>
+    </div>
+
+    <!-- HOW TO USE -->
+    <div class="usage-card">
+      <div class="usage-header">
+        <svg width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        Nasil Kullanilir
+      </div>
+      <div class="usage-body">
+        <div class="code-block">
+<span class="cmt">// Terminal veya kod icinde</span>
+
+<span class="cmt">// GET istek</span>
+<span class="kw">curl</span> <span class="url">http://localhost:3000/api/users</span> \
+  -H <span class="str">"X-API-Key: gw_50e2714951ee6ffde2ace9c419b8f615fb826abf49c28e4b"</span>
+
+<span class="cmt">// JavaScript fetch</span>
+<span class="kw">fetch</span>(<span class="str">'http://localhost:3000/api/users'</span>, {
+  headers: { <span class="str">'X-API-Key'</span>: <span class="str">'gw_50e2714951ee6ffde2ace9c419b8f615fb826abf49c28e4b'</span> }
+})
+
+<span class="cmt">// POST istek</span>
+<span class="kw">fetch</span>(<span class="str">'http://localhost:3000/api/data'</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: {
+    <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+    <span class="str">'X-API-Key'</span>: <span class="str">'gw_50e2714951ee6ffde2ace9c419b8f615fb826abf49c28e4b'</span>
+  },
+  body: JSON.stringify({ <span class="str">merhaba</span>: <span class="str">'dünya'</span> })
+})
+        </div>
+      </div>
+    </div>
+
+    <!-- ENDPOINTS -->
+    <div class="usage-card">
+      <div class="usage-header">
+        <svg width="16" height="16" fill="none" stroke="var(--blue)" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        API Endpoints
+      </div>
+      <div class="usage-body" style="padding:8px 20px;">
+        <div class="endpoint" onclick="quickTry('GET','/api/status')">
+          <span class="method m-get">GET</span>
+          <span class="ep-path">/api/status</span>
+          <span class="ep-desc">Sunucu durumu (key gerekmez)</span>
+          <button class="try-btn">Dene</button>
+        </div>
+        <div class="endpoint" onclick="quickTry('GET','/api/me')">
+          <span class="method m-get">GET</span>
+          <span class="ep-path">/api/me</span>
+          <span class="ep-desc">Kendini dogrula</span>
+          <span class="ep-badge">Auth</span>
+          <button class="try-btn">Dene</button>
+        </div>
+        <div class="endpoint" onclick="quickTry('GET','/api/users')">
+          <span class="method m-get">GET</span>
+          <span class="ep-path">/api/users</span>
+          <span class="ep-desc">Kullanici listesi</span>
+          <span class="ep-badge">Auth</span>
+          <button class="try-btn">Dene</button>
+        </div>
+        <div class="endpoint" onclick="quickTry('GET','/api/info')">
+          <span class="method m-get">GET</span>
+          <span class="ep-path">/api/info</span>
+          <span class="ep-desc">Proje bilgisi</span>
+          <span class="ep-badge">Auth</span>
+          <button class="try-btn">Dene</button>
+        </div>
+        <div class="endpoint" onclick="quickTry('GET','/api/time')">
+          <span class="method m-get">GET</span>
+          <span class="ep-path">/api/time</span>
+          <span class="ep-desc">Sunucu zamani</span>
+          <span class="ep-badge">Auth</span>
+          <button class="try-btn">Dene</button>
+        </div>
+        <div class="endpoint" onclick="quickTry('POST','/api/data')">
+          <span class="method m-post">POST</span>
+          <span class="ep-path">/api/data</span>
+          <span class="ep-desc">Veri gonder</span>
+          <span class="ep-badge">Auth</span>
+          <button class="try-btn">Dene</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PLAYGROUND -->
+    <div class="usage-card">
+      <div class="usage-header">
+        <svg width="16" height="16" fill="none" stroke="var(--purple)" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Playground
+      </div>
+      <div class="pg-body">
+        <div class="pg-left">
+          <div class="form-g">
+            <label>Method</label>
+            <select class="sel" id="pgMethod"><option value="GET">GET</option><option value="POST">POST</option></select>
+          </div>
+          <div class="form-g">
+            <label>Endpoint</label>
+            <select class="sel" id="pgEndpoint" onchange="pgUpdate()">
+              <option value="/api/status">/api/status (public)</option>
+              <option value="/api/me">/api/me</option>
+              <option value="/api/users">/api/users</option>
+              <option value="/api/info">/api/info</option>
+              <option value="/api/time">/api/time</option>
+              <option value="/api/data">/api/data (POST)</option>
+            </select>
+          </div>
+          <div class="form-g">
+            <label>API Key (otomatik doldurulur)</label>
+            <input class="inp mono" id="pgKey" value="gw_50e2714951ee6ffde2ace9c419b8f615fb826abf49c28e4b">
+          </div>
+          <div class="form-g" id="pgBodyGroup" style="display:none;">
+            <label>Body (JSON)</label>
+            <textarea class="inp mono" id="pgBody" rows="4" style="resize:vertical;min-height:80px;line-height:1.5;" placeholder='{"key": "value"}'></textarea>
+          </div>
+          <button class="send-btn" id="pgSend" onclick="pgSend()">Istek Gonder</button>
+        </div>
+        <div class="pg-right">
+          <div class="resp-meta" id="pgMeta"></div>
+          <div class="resp-out" id="pgOutput">// Istek gondermek icin butona bas</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>VCC API Dashboard</footer>
+  </div>
+
+  <script>
+    const BASE = location.origin;
+    const KEY = 'gw_50e2714951ee6ffde2ace9c419b8f615fb826abf49c28e4b';
+
+    function copyKey() {
+      navigator.clipboard.writeText(KEY);
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Kopyalandi!'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Kopyala'; btn.classList.remove('copied'); }, 2000);
+    }
+
+    function pgUpdate() {
+      const ep = document.getElementById('pgEndpoint').value;
+      const isPost = ep === '/api/data';
+      document.getElementById('pgMethod').value = isPost ? 'POST' : 'GET';
+      document.getElementById('pgBodyGroup').style.display = isPost ? 'block' : 'none';
+    }
+
+    async function pgSend() {
+      const btn = document.getElementById('pgSend');
+      const out = document.getElementById('pgOutput');
+      const meta = document.getElementById('pgMeta');
+      const method = document.getElementById('pgMethod').value;
+      const endpoint = document.getElementById('pgEndpoint').value;
+      const body = document.getElementById('pgBody').value;
+
+      btn.disabled = true; btn.textContent = 'Gonderiliyor...';
+      out.textContent = ''; meta.innerHTML = '';
+
+      const start = performance.now();
+      try {
+        const opts = { method, headers: { 'Content-Type': 'application/json', 'X-API-Key': KEY } };
+        if (method === 'POST') opts.body = body || '{}';
+        const res = await fetch(BASE + endpoint, opts);
+        const elapsed = (performance.now() - start).toFixed(0);
+        const data = await res.json();
+        const c = res.ok ? 'var(--accent)' : 'var(--red)';
+        const bg = res.ok ? 'var(--accent-glow)' : 'var(--red-dim)';
+        meta.innerHTML = `<span class="badge" style="background:${bg};color:${c};padding:4px 10px;border-radius:4px;font-size:.75rem;font-weight:600;">HTTP ${res.status}</span>
+          <span class="badge" style="background:var(--blue-dim);color:var(--blue);padding:4px 10px;border-radius:4px;font-size:.75rem;font-weight:600;">${method}</span>
+          <span class="badge" style="background:var(--purple-dim);color:var(--purple);padding:4px 10px;border-radius:4px;font-size:.75rem;font-weight:600;">${elapsed}ms</span>`;
+        out.style.color = 'var(--accent)';
+        out.textContent = JSON.stringify(data, null, 2);
+      } catch(e) {
+        out.style.color = 'var(--red)';
+        out.textContent = 'Hata: ' + e.message;
+      }
+      btn.disabled = false; btn.textContent = 'Istek Gonder';
+    }
+
+    function quickTry(method, path) {
+      document.getElementById('pgMethod').value = method;
+      document.getElementById('pgEndpoint').value = path;
+      pgUpdate();
+      window.scrollTo({ top: document.querySelector('.usage-card:last-of-type').offsetTop - 20, behavior: 'smooth' });
+      setTimeout(pgSend, 400);
+    }
+  </script>
+</body>
+</html>
